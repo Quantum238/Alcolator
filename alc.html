@@ -1,0 +1,461 @@
+<html>
+
+<head>
+<style>
+	#siteouter{margin:auto;max-width:960px}
+	#siteinner{display:inline-block;width:100%;background-color:#E8E8E8}
+	h1{text-align:center;font-family:calibri;padding:0;margin:0;}
+	#alcOuter{text-align:center}
+	#alcInner{display:inline-block;}
+	form{float:left;text-align:right;margin:25px 25px 25px 0;}
+	canvas{border:1px solid black;margin:20px;}
+</style>
+
+	<script language=JavaScript>
+	
+	
+	function drunk(form) { //this function gets data from the form and calculates the Peak BAC
+	//it is called onclick of the submit button
+		
+		
+		
+		
+		//get values from forms
+		var drinks = form.drinks.value;
+		var weight = form.weight.value;
+		var time = form.drinktime.value;
+		var ounces = form.ounces.value;
+		
+		//deal with empty boxes
+		if (drinks == '') drinks = 0;
+		if (weight == '') weight = 1/16;
+		if (time == '') time = 0;
+		if (ounces == '') ounces = 0;
+		
+		
+		var r = 1; //if no box is checked
+		//ACTUALLY, CAN YOU MAKE ON OF THEM BE DEFAULT CHECKED, 
+		//AND THEN THIS LINE ABOVE CHANGES TO REFLECT THAT
+		if (form.gender[0].checked) {r = .68};
+		if (form.gender[1].checked) {r = .55};
+
+		
+		//here is some math
+		weight = weight * 16; //weight now in ounces
+		var beta = .015/100;
+		var lhs = (.8 * ounces * drinks) / (weight * r);
+		var rhs = beta * time;
+		var C = lhs - rhs;
+		var PBAC = C * 100;
+		
+		//display the peak BAC 
+		form.answer.value = PBAC;
+		
+		constants = initCanvas(PBAC);
+		//everytime you click submit, I want to blank out and redraw the canvas
+		//with a new y axis related to how big the PBAC is (the max value 
+		//is 1.15 * PBAC)
+		//constants is an array of things defined in initCanvas that 
+		//I need for drawing in later functions
+		//it isnt actually used in this function, except to pass down the chain
+
+		//draw it on the graph using draw function, defined below
+		draw(PBAC,constants);
+		
+		}
+		
+	function initCanvas(PBAC){//this function draws the grid and some initial stuff on the graph
+	//it is called from the onload of the body tag
+	//thats cool
+	
+	//when it is called with no arguments, the max of the y axis is .09
+	//otherwise the max is 15% again as much the PBAC
+	
+	//I imagine you can call functions with arguments from html?  Not sure.
+	//Alternatively the boxes could be given default values
+		
+	
+		
+		//gotta just do this to initialize the canvas and get all its internal variables ready to go
+		var canvas = document.getElementById("alcGraph");
+		ctx = canvas.getContext("2d");
+		//this line blanks the canvas (idiomatic)
+		canvas.width = canvas.width;
+		
+		//less typing
+		height = canvas.height;
+		width = canvas.width;
+		//THIS FUNCTION IS REACTIVE TO THE SIZE OF THE CANVAS ELEMENT, DEFINED
+		//BELOW THE HTML FORM ELEMENT.  IT COULD
+		//INSTEAD BE USED TO SET THE CANVAS SIZE.  DEPENDS ON WHAT CAN BE PROMISED
+		//REGARDING THE FORMATTING OF THE WHOLE PAGE
+		//AND WHAT LOOKS NICE.
+		
+		
+		//CURRENTLY TO CHANGE THE SIZE OF THE CANVAS, CTRL F 
+		// <canvas id="alcGraph" width="600" height="600"></canvas>
+		//AND ALTER THE HEIGHT AND WIDTH FIELDS
+		
+		
+		//THESE I DECIDED ON.  LOOKS OK FOR 3 DIGIT PRECISION ON Y-AXIS 
+		//MAY BE CHANGED TO WHATEVER
+		//MUST END IN .5 FOR TOP SECRET REASONS
+		var vert_padding = 19.5;
+		var horiz_padding = 35.5;
+		
+		//COLOR CHOICES
+		var gridcolor = "#ddd"; //color of background gridlines.  //#ddd is a light gray
+		var axescolor = "#000"; //color of axes and tickmarks //000 is black
+		var duicolor = "#F00"; //color of .08 BAC line
+		var dangerousdrivecolor = "#FF0"; //color of .04 BAC line
+		//** THERE IS ANOTHER COLOR
+		//IT IS IN THE DRAW Function
+		//IT IS CALLED BACcolor
+		//GO AHEAD AND CTRL F IT
+		//ITS THE COLOR OF THE BAC LINE
+		//DONT FORGET ABOUT ITTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTT
+		
+		//THESE ARE ALSO ARBITRARY
+		//I THINK THE 12 HOURS IS LIKELY TO NOT CHANGED
+		//BUT THE NUMBER OF VERTICAL LINES IS JUST, IDK
+		//SEEMED LIKE A NICE NUMBER.  CHANGE AT WILL
+		var num_hours = 12;
+		var num_horiz_lines = height / 10;
+
+		//some math to figure out how far to space the lines apart
+		var horiz_space_left = width - horiz_padding * 2;
+		var vert_space_left = height - vert_padding * 2;
+				
+		var x_space = horiz_space_left / num_hours; //space between ticks on x axis
+		var y_space = vert_space_left / num_horiz_lines; //space between ticks on y axis
+
+
+		//draw vertical gridlines
+		for (var x = horiz_padding; x<=width - horiz_padding; x+=x_space) {
+		ctx.moveTo(x,vert_padding);
+		ctx.lineTo(x,height - vert_padding);	
+		}
+		
+		ctx.strokeStyle = gridcolor;
+		ctx.stroke();
+		
+		//draw horizontal grid lines
+		for (var y = vert_padding; y<height - vert_padding ;y+=y_space) {
+		ctx.moveTo(horiz_padding,y);
+		ctx.lineTo(width - horiz_padding,y)
+		}
+		
+		ctx.stroke();
+		
+		
+		
+		//draw axes		
+		ctx.beginPath();
+		//y-axis
+		ctx.moveTo(horiz_padding,vert_padding);
+		ctx.lineTo(horiz_padding,height - vert_padding);
+		//x-axis
+		ctx.moveTo(horiz_padding,height - vert_padding);
+		ctx.lineTo(width - horiz_padding,height - vert_padding);
+
+		ctx.strokeStyle = axescolor //black - axes
+		ctx.stroke();
+		
+		//stick 0 on the origin-ish
+		ctx.fillText('0',horiz_padding * 3/4,height - vert_padding * 3/4);
+		
+		//make the tick marks
+		ctx.beginPath();
+	
+		var num = 1;
+		//the first x tick mark is at t + 30 mins because the PBAC is not achieved at time 0
+		ctx.moveTo(x_space * 0.5 + horiz_padding, height - 5*vert_padding/4);
+		ctx.lineTo(x_space * 0.5 + horiz_padding, height - 3*vert_padding/4);
+		ctx.textAlign = 'center'; //horizontal alignment
+		ctx.fillText("1/2",x_space*0.5 + horiz_padding,height - vert_padding/4);
+
+		//x_ticks and x_tick labels
+		for (var x = x_space + horiz_padding;x<width;x+=x_space){
+		
+		ctx.moveTo(x,height - 5*vert_padding/4);
+		ctx.lineTo(x,height - 3*vert_padding/4);
+		
+		ctx.fillText(num.toString(),x,height - vert_padding/4);
+		num++;
+	
+		}
+		
+		//y_ticks
+		for (var y = vert_padding ; y<=height - vert_padding; y+=y_space){
+		ctx.moveTo(7*horiz_padding/8,y);
+		ctx.lineTo(9*horiz_padding/8,y);
+		}
+		
+		ctx.stroke();
+		
+		
+		//the value start is the max of the y-axis graph. 
+		//I want to make it 15% higher than the peak BAC,
+		//but default to .09 if function is called with no arguments
+		
+		/*if (arguments.length == 1){
+			var start = PBAC * 1.15;
+		}
+		else if (arguments.length == 0) {
+			var start = .09;
+		}
+		*/
+		//the above is a garbage-r way to do the next line
+		
+		start = PBAC || .09;
+		//idomatic expression to assign .09 as a default value for 
+		//start if function is called with no arguments
+		
+		//y labels.  Slightly more complicated than x because the y axis is positive down
+		//also it doesnt always reach 0.  Its intended to, and I'm not
+		//totally sure why the transformation didn't work.
+		//Actually I think I know why, but
+		//PROBLEM FOR LATER, AMIRITE
+
+		var ii = 0;
+		ctx.textAlign = 'left';
+		ctx.textBaseline = 'middle'; //vertical alignment
+		for (var y = vert_padding; y<=height - vert_padding; y+=y_space){
+		ctx.fillText((start - (start/num_horiz_lines) * ii).toFixed(3).toString(),1,y); 
+		//the argument '3' there is the number of 
+		//decimal places shown.  2 isnt really enough.  
+		//4 begins to not fit with horiz_padding = 35.5
+		//those things need to kind of be tweaked in tandem
+		ii++;
+		}
+	
+		// draw the DUI and unsafe to drive lines
+		//convert number to grid y is a function, defined below, 
+		//that converts between coord on the graph axes and 
+		//actual coords on the canvas element
+		var legal_limit = convert_number_to_grid_y(vert_padding,height,y_space,start,.08); 
+		//.08 is NYS DUI limit
+		var drive_limit = convert_number_to_grid_y(vert_padding,height,y_space,start,.04); 
+		//.04 seems to be the number above
+		//which driving is a nono
+		
+		//NOTE THAT SINCE THE Y AXIS RESCALES RELATIVE TO THE PEAK BAC, NEITHER OF THESE
+		//LINES ARE GUARANTEED TO BE SHOWN
+
+
+		//draw the lines
+		//(the canvas will happily allow you to draw things
+		//out of range, so no need to check
+		ctx.beginPath();
+		ctx.moveTo(horiz_padding,legal_limit);
+		ctx.lineTo(width - horiz_padding,legal_limit);
+		ctx.strokeStyle = duicolor;
+		ctx.stroke();
+		
+		ctx.beginPath();
+		ctx.moveTo(horiz_padding,drive_limit);
+		ctx.lineTo(width - horiz_padding,drive_limit);
+		ctx.strokeStyle = dangerousdrivecolor;
+		ctx.stroke();
+		
+		//just need to pass this array around
+		return [vert_padding,height,y_space,horiz_padding,width,x_space,start,num_horiz_lines]
+
+
+		}
+	
+	function convert_number_to_grid_y(vert_padding,height,y_space,start,value) {
+	//takes a number from the axes coord system and converts it to the canvas coord system.  
+	//Only does y-coord
+	//I think its correct now.  It's hard to tell because of precision loss and 
+	//rounding and zooming and the lack of a caring god
+		var axis_heght = height - 2 * vert_padding ;
+		var ans = value * axis_heght / start;
+		return height - (ans + vert_padding);
+		}
+	
+	function convert_number_to_grid_x(horiz_padding,width,x_space,value) {
+	//takes a number from the axes coord system and converts it to the canvas coord system.  
+	//only does x coord
+	//is correct.  
+		var axis_width = width - 2 * horiz_padding;
+		var ans = value * (axis_width / 12);
+		return ans + horiz_padding ;
+		}
+		
+	function draw(value,constants){
+	//draws the BAC decay line for a given BAC
+	
+	//gotta reget the canvas and bullshit because my attempts at making globals failed
+	var canvas = document.getElementById("alcGraph");
+	var ctx = canvas.getContext("2d");
+	var vert_padding = constants[0];
+	var height = constants[1];
+	var y_space = constants[2];
+	var horiz_padding = constants[3];
+	var width = constants[4];
+	var x_space = constants[5];
+	var start = constants[6]
+	
+	canvas.constants = constants;
+	//COLOR
+	var BACcolor = "#0F0";  //green, because the middle guy was left out
+	//COLOR
+	
+	
+
+	
+	
+	//some math to figure out when the 0 BAC happens
+	//it could be the case that the BAC will not decay in 12 hours
+	//in which case the loop terminates then also (the ii condition)
+	//if that happens, cur will end up positive and the final y value
+	//should be cur.  Otherwise it should be 0
+	
+	//first get an array of 1000 times equally spaced between .5 and 12
+	var vals = Array(1000);
+	vals[0] = 0.5
+	for (var ii = 1; ii < vals.length; ii++) {
+		vals[ii] = vals[ii-1] + (12 - 0.5)/1000;
+	}
+		
+	var cur = value; //cur as in current BAC at each time step, which starts out as the PBAC
+	
+	//now subtract the metabolic rate from the PBAC til we hit 0
+	var ii = 1;
+	while (cur > 0 && ii<vals.length-1) {
+		cur = cur - .015 * (12 - 0.5)/1000;
+		ii++
+	}
+	
+	
+	if (cur <0) {
+	cur = 0;
+	}
+	
+	//get the four coords of the line endpoints
+	//This is just the PBAC
+	var y_start = convert_number_to_grid_y(vert_padding,height,y_space,start,value);
+
+	//Finished meaning BAC = 0 or ii "=" 12 hours
+	var y_fin = convert_number_to_grid_y(vert_padding,height,y_space,start,cur);
+
+	//PBAC occurs at time  = 1/2 hour
+	var x_start = convert_number_to_grid_x(horiz_padding,width,x_space,0.5);
+	
+	//Position where PBAC is 0, or 12 if PBAC doesnt decay
+	x_fin = convert_number_to_grid_x(horiz_padding,width,x_space,vals[ii])
+
+	canvas.store = [x_start,x_fin,y_start,y_fin];
+	//draw that shit
+	ctx.beginPath();
+	ctx.strokeStyle = BACcolor;
+
+	ctx.moveTo(x_start,y_start);
+	ctx.lineTo(x_fin,y_fin);
+	ctx.stroke()
+	canvas.addEventListener("mouseover",mouseThing1,false);
+	}
+	
+	function mouseThing1(e) {
+		var canvas = document.getElementById("alcGraph");
+		canvas.removeEventListener("mouseover",mouseThing1,false)
+		canvas.addEventListener("mousemove",mouseThing2,false)
+
+	}
+	
+	function mouseThing2(e) {
+		var canvas = document.getElementById("alcGraph");
+		
+		
+		var x  = e.clientX + document.body.scrollLeft + 
+			document.documentElement.scrollLeft;
+		var y = e.clientY + document.body.scrollTop + 
+			document.documentElement.scrollTop;
+		
+		x -= canvas.offsetLeft;
+		y-=canvas.offsetTop;
+		canvas.addEventListener("mouseout",mouseThing3,false)
+		var output = document.getElementById("position")
+		
+		x_start = canvas.store[0];
+		x_fin = canvas.store[1];
+		y_start = canvas.store[2];
+		y_fin = canvas.store[3];
+		
+		slope = (y_start - y_fin) / (x_start - x_fin);
+		
+		y_val = slope * ( x - x_start) + y_start;
+		
+		var constants = canvas.constants;
+		var vert_padding = constants[0];
+		var height = constants[1];
+		var y_space = constants[2];
+		var horiz_padding = constants[3];
+		var width = constants[4];
+		var	x_space = constants[5];
+		var start = constants[6]
+		var num_horiz_lines = constants[7]
+		
+		y_val = start  - (start / num_horiz_lines) * (y_val - vert_padding)/(y_space);
+		
+		if (y_val<0) y_val = 0;
+		
+		
+		output.value = y_val;
+		
+		
+		}
+		
+		function mouseThing3(e) {
+			var canvas = document.getElementById("alcGraph");
+			canvas.removeEventListener("mouseout",mouseThing3,false)
+			canvas.addEventListener("mouseover",mouseThing1,false)
+			}
+
+
+	
+	
+	
+	
+	</script>
+
+	<body style="background-color:#858585" onload=initCanvas()>
+	
+		<div id="siteouter">
+			<div id="siteinner">
+				<h1>Alculator</h1>
+				<div id="alcOuter">
+					<div id="alcInner">
+				<!--*****************START - The actually relevant bits*****************-->
+						
+						<form name=alculator formaction = "cgiexample.py">
+									<label for=gender>Gender:</label><input type=radio id=gender name=gender value=male>Male
+									<input type=radio id=gender name=gender value=female>Female
+									<br>
+									<label for=drinks>Number of drinks:</label><input type=text id=drinks name=drinks>
+									<br>
+									<label for=weight>Weight (lbs):</label><input type=text id=weight name=weight>
+									<br>
+									<label for=drinktime>Total drinking time*:</label><input type=text id=drinktime name=drinktime>
+									<br>
+									<label for=ounces>Ounces of alcohol per drink:</label><input type=text id=ounces name=ounces>
+									<br>
+									<button type=button value=Submit class=readmore onclick=drunk(alculator)>Submit</button>
+									<br>
+									<label for=answer>Your BAC is:</label><input id=answer name=answer>
+									<label for=position>BAC At That Time is:</label><input id=position name=position>
+						</form>
+						
+						<canvas id="alcGraph" width="600" height="600"></canvas>
+
+
+	
+						<!--*****************END - The actually relevant bits*****************-->
+					</div>
+				</div>
+			</div>
+		</div>	
+
+	</body>
+</html>
